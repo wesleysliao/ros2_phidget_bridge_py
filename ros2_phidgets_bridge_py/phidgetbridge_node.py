@@ -21,6 +21,7 @@ class PhidgetBridgeNode(Node):
                  bridge_channel,
                  bridge_serial = None,
                  bridge_hubport= 0,
+                 bridge_is_hubport_device = False,
 
                  data_rate_Hz = 60,
 
@@ -36,7 +37,7 @@ class PhidgetBridgeNode(Node):
         self.pb_ch = VoltageRatioInput()
         self.pb_ch.setChannel(int(bridge_channel))
         self.pb_ch.setHubPort(bridge_hubport)
-        self.pb_ch.setIsHubPortDevice(bridge_hubportdevice)
+        self.pb_ch.setIsHubPortDevice(bridge_is_hubport_device)
         if bridge_serial is not None:
             self.pb_ch.setDeviceSerialNumber(bridge_serial)
         
@@ -52,18 +53,17 @@ class PhidgetBridgeNode(Node):
         self.pub_force = self.create_publisher(WrenchStamped, self.topic, 1)
 
         self.pb_ch.setOnAttachHandler(self.onAttachHandler)
-        self.pb_ch.setOnDetachHandler(self.onDetachHandler)
         self.pb_ch.setOnVoltageRatioChangeHandler(self.onVoltageRatioChangeHandler)
 
         self.pb_ch.openWaitForAttachment(1000)
 
-    def onAttatchHandler(self, channel):
+    def onAttachHandler(self, channel):
         channel.setDataInterval(self.data_interval_ms)
         channel.setVoltageRatioChangeTrigger(0.0)
         channel.setBridgeGain(self.gain)
         channel.setBridgeEnabled(True)
 
-    def voltageRatioToForce(self, voltageRatio):
+    def voltageRatioToForce(self, voltage_ratio):
         return ((voltage_ratio*self.force_conversion_multiple) 
                  + self.force_conversion_offset)
 
@@ -74,7 +74,7 @@ class PhidgetBridgeNode(Node):
                     stamp=self.get_clock().now().to_msg(),
                     frame_id=self.frame_id),
                 wrench=Wrench(
-                    force=Vector3(x=self.voltageTatioToForce(voltageRatio),
+                    force=Vector3(x=self.voltageRatioToForce(voltageRatio),
                                   y=0.0,
                                   z=0.0),
                     torque=Vector3(x=0.0, y=0.0, z=0.0))))
